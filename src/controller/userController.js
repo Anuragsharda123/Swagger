@@ -1,79 +1,76 @@
 const User = require('../model/User');
+const express = require('express');
+const bcrypt = require('bcrypt');
+const JWT = require('jsonwebtoken')
+const app = express();
+const secret = "Anurag123#@!";
+var token;
 
-const getAllUser = async (req, res) =>{
-    try{
-        const users = await User.findAll();
-        if(users.length>0){
-            res.json(users);
-        }else{
-            res.send("Nothing is here...");
-        }
-    }
-    catch
-    {
-        res.status(404).send("Something Went wrong....");
-    }
-}
+app.use(express.json());
 
-const getUser = async(req, res) =>{
+const getUser = async (req, res) => {
     try{
-        const user = await User.findByPk(req.params.id)
+        const user = await User.findByPk(req.params.id);
         if(user){
-            res.json(user);
-        }else{
-            res.status(401).send("User doesn't exist...");
+            res.json(user)
         }
-    }catch(err){
-        res.status(404).send("User not found..." + err);
+        else{
+            res.status(404).send("User not Found")
+        }
+    }
+    catch(err){
+        res.status(404).send(err + " & User not Found......");
     }
 }
 
-const addUser = async (req, res) =>{
+const addUser = async (req, res) => {
     try{
+        req.body.password = await bcrypt.hash(req.body.password, 10);
         const user = await User.create(req.body);
-        if (user){
-            res.json(user);
-        }
-        else{
-            res.status(400).send("user not create...");
-        }
+        
+        res.json(user);
     }
-    catch{
-        res.status(500).send("Something is fishy...");
+    catch(err){
+        console.log(err.message);
+        res.status(404).send(err + " & User can't added")
     }
 }
 
-const updateUser = async(req, res) =>{
-    try{
-        const user = await User.findByPk(req.params.id);
-        if(user){
-            await user.update(req.body);
-            await user.save();
-            res.json(user);
-        }
-        else{
-            res.status(500).send("User not found");
-            console.log("haha------->",req.params.id);
-        }
-    }
-    catch{
-        res.status(500).send("Error...");
+const updatUser = async (req, res) => {
+    const user = await User.findByPk(req.params.id);
+    if(user){
+        await user.update(req.body);
+        res.json(user);
+    } else {
+        res.status(404).send("User Not Found")
     }
 }
 
-const deleteUser = async (req, res) => {
-    try{
-        const user = await User.findByPk(req.params.id);
-        if(user){
-            user.destroy();
-            res.send("User deleted....");
-        }else{
-            res.status(404).send("User not found ")
+const loginUser = async (req, res) => {
+    const {email, password} = req.body;
+    const user = await User.findOne({ where: { email: email } })
+    // console.log(user)
+    if(user){
+        const pass = await bcrypt.compare(password, user.password);
+        if(pass){
+            token = JWT.sign({user}, secret);
+            
+            res.json({"users": user, "token": token});
+
+            const check = JWT.verify(token,secret);
+            console.log(check);
+            console.log("User login successfully.....");
+        } else {
+            res.status(401).send("Invalid Credentials.....");
         }
-    }
-    catch{
-        res.status(500).send("Internal Server Error....")
+    } else {
+        res.status(401).send("User doesn't exist");
     }
 }
 
-module.exports = {getAllUser, getUser, addUser, updateUser, deleteUser};
+const getAllUser = async (req, res) => {
+    const users = await User.findAll();
+    res.json(users);
+}
+
+module.exports = {addUser, getUser, updatUser, loginUser, getAllUser};

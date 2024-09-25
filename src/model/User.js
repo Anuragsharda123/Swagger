@@ -1,5 +1,5 @@
 const Sequelize = require('sequelize');
-const sequelize = require("../config/config")
+const sequelize = require("../config/config");
 
 const User = sequelize.define('User', {
     email:{
